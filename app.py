@@ -77,15 +77,69 @@ def Two():
     return jsonify({'stations': [dict(row) for row in stationss]})
 
 
-@app.route("/normal")
-def normal():
-    return hello_dict
+@app.route("/api/v1.0/tobs")
+def three():
+    import datetime
+    # Using the most active station id
+# Query the last 12 months of temperature observation data for this station and plot the results as a histogram
+## Calculate the date one year from the last date in data set.
+    end_date = datetime.datetime(2017, 8, 23)
+    start_date = end_date - datetime.timedelta(days = 365)
+##print(start_date)
 
 
-@app.route("/jsonified")
-def jsonified():
-    return jsonify(hello_dict)
+## Perform a query to retrieve the data and precipitation scores
 
+    tobs_results = session.query(measurement.date, measurement.tobs)\
+    .filter(measurement.date>= start_date)\
+    .filter(measurement.station == "USC00519281").all()
+##print(prcp_results)
+## Save the query results as a Pandas DataFrame and set the index to the date column
+
+    tobs_df = pd.DataFrame(tobs_results)
+
+## Sort the dataframe by date
+#tobs_df = tobs_df.sort_values("date")
+##prcp_df
+## Use Pandas Plotting with Matplotlib to plot the data
+
+#tobs_df.plot.hist()
+#plt.xlabel("Temperature")
+    
+    
+    
+    #return jsonify({'temperatures': [dict(row) for row in tobs_df]})
+    #return jsonify(tobs_df.set_index('tobs').to_dict())
+    #return jsonify(tobs_df.tobs.to_dict())
+    return jsonify(tobs_df['tobs'].tolist())
+    #return jsonify(tobs_df['tobs']) #error
+
+@app.route("/api/v1.0/<start>")
+def four(start):
+    #Return a JSON list of the minimum temperature, the average temperature, 
+    # and the max temperature for a given start or start-end range.
+    #When given the start only, calculate TMIN, TAVG, and TMAX for all 
+    # dates greater than and equal to the start date.
+    #2010-01-04
+    
+    tobs = session.execute(f'SELECT tobs FROM measurement where date >= {start}').fetchall()
+    tobs_df = pd.DataFrame(tobs)
+    return jsonify(tobs_df.describe().to_dict())
+
+
+@app.route("/api/v1.0/<start>/<end>")
+def five(start,end):
+    #Return a JSON list of the minimum temperature, the average temperature, 
+    # and the max temperature for a given start or start-end range.
+    #When given the start and the end date, calculate the TMIN, TAVG, and 
+    # TMAX for dates between the start and end date inclusive.
+    tobss = session.execute(f'SELECT tobs FROM measurement where date >= {start} and date <= {end}').fetchall()
+    tobss_df = pd.DataFrame(tobss)
+    if tobss_df.empty: 
+        return jsonify("sorry, that date range is whack")
+    else:    
+        return jsonify(tobss_df.describe().to_dict())
+        
 
 if __name__ == "__main__":
     app.run(debug=True)
